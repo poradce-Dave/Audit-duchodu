@@ -1,0 +1,575 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Audit starobního důchodu</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#0F0F0E;--bg2:#1A1A18;--bg3:#242422;--border:#2E2E2C;
+  --text:#F0EDE8;--text2:#9A9790;--text3:#5A5855;
+  --accent:#C8A96E;--accent2:#8FB87A;
+  --red:#E05C5C;--amber:#E0A050;--green:#6DB87A;--blue:#6A9FD4;
+}
+body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min-height:100vh;padding:2rem 1rem}
+.app{max-width:780px;margin:0 auto}
+.header{margin-bottom:2.5rem;padding-bottom:1.5rem;border-bottom:1px solid var(--border)}
+.header-label{font-family:'DM Mono',monospace;font-size:11px;color:var(--accent);letter-spacing:.15em;text-transform:uppercase;margin-bottom:.75rem}
+.header-title{font-family:'DM Serif Display',serif;font-size:2.2rem;color:var(--text);line-height:1.1;margin-bottom:.5rem}
+.header-sub{font-size:14px;color:var(--text2);line-height:1.6}
+
+/* API Key */
+.api-section{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:1.25rem;margin-bottom:1.5rem}
+.api-label{font-family:'DM Mono',monospace;font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.1em;margin-bottom:.5rem;display:block}
+.api-row{display:flex;gap:10px;align-items:center}
+.api-input{flex:1;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:10px 14px;color:var(--text);font-size:13px;font-family:'DM Mono',monospace;outline:none;transition:border .15s}
+.api-input:focus{border-color:var(--accent)}
+.api-input::placeholder{color:var(--text3)}
+.api-saved{font-size:12px;color:var(--green);margin-top:6px}
+
+/* Steps */
+.step{display:none}.step.active{display:block}
+
+/* Upload */
+.upload-zone{border:1px dashed var(--border);border-radius:12px;padding:3rem 2rem;text-align:center;cursor:pointer;transition:all .2s;position:relative;background:var(--bg2)}
+.upload-zone:hover,.upload-zone.drag{border-color:var(--accent);background:var(--bg3)}
+.upload-icon{font-size:2.5rem;margin-bottom:1rem;opacity:.5}
+.upload-title{font-family:'DM Serif Display',serif;font-size:1.3rem;color:var(--text);margin-bottom:.5rem}
+.upload-sub{font-size:13px;color:var(--text2)}
+.upload-zone input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+.file-selected{display:flex;align-items:center;gap:12px;background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:14px 18px;margin-top:1rem}
+.file-name{font-size:13px;color:var(--text);font-weight:500}
+.file-size{font-size:12px;color:var(--text2)}
+
+/* Questions */
+.questions-section{margin-top:1.5rem}
+.q-title{font-family:'DM Serif Display',serif;font-size:1.1rem;margin-bottom:1.25rem;color:var(--text)}
+.q-item{margin-bottom:1.25rem}
+.q-label{display:block;font-family:'DM Mono',monospace;font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:.5rem}
+.q-options{display:flex;flex-wrap:wrap;gap:8px}
+.q-opt{padding:7px 16px;border:1px solid var(--border);border-radius:8px;font-size:13px;cursor:pointer;color:var(--text2);background:var(--bg2);transition:all .15s}
+.q-opt:hover{border-color:var(--accent);color:var(--text)}
+.q-opt.sel{border-color:var(--accent);color:var(--accent);background:rgba(200,169,110,.08)}
+.q-input{width:100%;background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:10px 14px;color:var(--text);font-size:13px;font-family:'DM Sans',sans-serif;outline:none;transition:border .15s}
+.q-input:focus{border-color:var(--accent)}
+.q-input::placeholder{color:var(--text3)}
+
+/* Buttons */
+.btn{padding:11px 26px;border:none;border-radius:10px;font-size:14px;font-weight:500;cursor:pointer;transition:all .2s;font-family:'DM Sans',sans-serif}
+.btn-primary{background:var(--accent);color:#0F0F0E}
+.btn-primary:hover{background:#d4b87a;transform:translateY(-1px)}
+.btn-primary:disabled{opacity:.4;cursor:not-allowed;transform:none}
+.btn-ghost{background:transparent;border:1px solid var(--border);color:var(--text2)}
+.btn-ghost:hover{border-color:var(--text2);color:var(--text)}
+.btn-save{background:var(--bg3);border:1px solid var(--border);color:var(--text2);padding:10px 18px;border-radius:8px;font-size:13px;cursor:pointer;transition:all .15s;font-family:'DM Sans',sans-serif}
+.btn-save:hover{border-color:var(--accent);color:var(--accent)}
+.btn-row{display:flex;gap:12px;margin-top:1.5rem;align-items:center}
+
+/* Loading */
+.loading{text-align:center;padding:4rem 2rem}
+.loading-ring{width:48px;height:48px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin 1s linear infinite;margin:0 auto 1.5rem}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading-title{font-family:'DM Serif Display',serif;font-size:1.3rem;margin-bottom:.5rem}
+.loading-sub{font-size:13px;color:var(--text2)}
+
+/* Output */
+.output-header{margin-bottom:2rem;padding-bottom:1.5rem;border-bottom:1px solid var(--border)}
+.output-label-sm{font-family:'DM Mono',monospace;font-size:11px;color:var(--accent);letter-spacing:.1em;text-transform:uppercase;margin-bottom:.5rem}
+.output-title{font-family:'DM Serif Display',serif;font-size:1.8rem;margin-bottom:.25rem}
+.output-date{font-size:12px;color:var(--text3)}
+.metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:1.25rem}
+.metric{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:14px}
+.metric-label{font-size:10px;color:var(--text3);margin-bottom:6px;font-family:'DM Mono',monospace;text-transform:uppercase;letter-spacing:.05em}
+.metric-value{font-size:1.3rem;font-weight:600;color:var(--text)}
+.metric-sub{font-size:11px;color:var(--text2);margin-top:3px}
+.section{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:1.25rem;margin-bottom:1rem}
+.section-head{font-family:'DM Mono',monospace;font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.1em;margin-bottom:1rem}
+.semafor{border-left:2px solid;border-radius:0 8px 8px 0;padding:10px 14px;margin-bottom:.75rem;font-size:13px;line-height:1.5}
+.semafor:last-child{margin-bottom:0}
+.semafor-red{background:rgba(224,92,92,.08);border-color:var(--red);color:#f0b0b0}
+.semafor-amber{background:rgba(224,160,80,.08);border-color:var(--amber);color:#f0c890}
+.semafor-green{background:rgba(109,184,122,.08);border-color:var(--green);color:#a0d4a8}
+.semafor-blue{background:rgba(106,159,212,.08);border-color:var(--blue);color:#a8c8e8}
+.semafor-title{font-weight:600;margin-bottom:3px;font-size:13px}
+.period-table{width:100%;border-collapse:collapse;font-size:13px}
+.period-table th{text-align:left;padding:6px 8px;font-family:'DM Mono',monospace;font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid var(--border)}
+.period-table td{padding:8px;border-bottom:1px solid rgba(46,46,44,.5);color:var(--text2)}
+.period-table td:first-child{font-family:'DM Mono',monospace;font-size:11px;color:var(--text3)}
+.period-table tr:last-child td{border-bottom:none}
+.badge{display:inline-block;padding:2px 9px;border-radius:6px;font-size:11px;font-weight:500;font-family:'DM Mono',monospace}
+.badge-red{background:rgba(224,92,92,.15);color:#f0a0a0}
+.badge-amber{background:rgba(224,160,80,.15);color:#f0c070}
+.badge-green{background:rgba(109,184,122,.15);color:#90d498}
+.badge-blue{background:rgba(106,159,212,.15);color:#90c0e8}
+.scenarios{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:.5rem}
+.sc-card{background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:14px}
+.sc-card.best{border-color:rgba(109,184,122,.35);background:rgba(109,184,122,.04)}
+.sc-title{font-size:12px;font-weight:600;color:var(--text);margin-bottom:10px}
+.sc-card.best .sc-title{color:#90d498}
+.sc-row{display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px;gap:8px}
+.sc-row span:first-child{color:var(--text3)}
+.sc-row span:last-child{color:var(--text);font-weight:500;text-align:right}
+.sc-card.best .sc-row span:last-child{color:#90d498}
+.sc-note{font-size:11px;color:var(--text3);margin-top:8px;line-height:1.4}
+.propast-row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px;gap:12px}
+.propast-row:last-child{border-bottom:none}
+.propast-row span:first-child{color:var(--text2)}
+.propast-highlight span:last-child{color:var(--red);font-weight:600}
+.action-list .action{display:flex;gap:12px;padding:10px 0;border-bottom:1px solid var(--border);font-size:13px;line-height:1.5}
+.action-list .action:last-child{border-bottom:none}
+.action-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;margin-top:5px}
+.dot-red{background:var(--red)}.dot-amber{background:var(--amber)}.dot-green{background:var(--green)}.dot-blue{background:var(--blue)}
+.action-text{color:var(--text2)}.action-text strong{color:var(--text);font-weight:500}
+.restart-btn{margin-top:2rem;padding-top:1.5rem;border-top:1px solid var(--border);display:flex;gap:12px;align-items:center}
+.disclaimer{font-size:11px;color:var(--text3);margin-top:1.5rem;line-height:1.6;font-family:'DM Mono',monospace}
+.error-box{background:rgba(224,92,92,.08);border:1px solid rgba(224,92,92,.3);border-radius:10px;padding:1rem 1.25rem;font-size:13px;color:#f0b0b0;margin-top:1rem}
+@media print{
+  body{background:#fff;color:#000;padding:0}
+  .btn,.restart-btn,.api-section{display:none}
+  .section,.metric,.sc-card{border:1px solid #ddd;background:#fff}
+  .section-head,.metric-label,.q-label,.output-label-sm,.header-label{color:#666}
+  .metric-value,.output-title,.header-title{color:#000}
+  .semafor-red{background:#fff0f0;border-color:#e05c5c;color:#900}
+  .semafor-amber{background:#fff8f0;border-color:#e0a050;color:#840}
+  .semafor-green{background:#f0fff0;border-color:#6db87a;color:#060}
+  .semafor-blue{background:#f0f4ff;border-color:#6a9fd4;color:#039}
+  .badge-red{background:#ffe0e0;color:#900}
+  .badge-amber{background:#fff0d0;color:#840}
+  .badge-green{background:#e0ffe0;color:#060}
+  .badge-blue{background:#e0f0ff;color:#039}
+  .sc-card{background:#f9f9f9}
+  .period-table td,.propast-row,.action-list .action{color:#333}
+  .period-table th{color:#666}
+  .action-text{color:#333}
+  .disclaimer{color:#999}
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="header">
+    <div class="header-label">Nástroj finančního poradce</div>
+    <div class="header-title">Audit starobního důchodu</div>
+    <div class="header-sub">Nahrajte IOLDP z ePortálu ČSSZ. Aplikace automaticky vyčte data a připraví kompletní výstup se scénáři a dopadem na důchod.</div>
+  </div>
+
+  <!-- API KEY -->
+  <div class="api-section" id="apiSection">
+    <span class="api-label">OpenRouter API klíč</span>
+    <div class="api-row">
+      <input type="password" class="api-input" id="apiKeyInput" placeholder="sk-or-..." autocomplete="off">
+      <button class="btn-save" onclick="saveApiKey()">Uložit</button>
+    </div>
+    <div class="api-saved" id="apiSaved" style="display:none">✓ API klíč uložen lokálně</div>
+  </div>
+
+  <!-- STEP 1: Upload + otázky -->
+  <div class="step active" id="step-upload">
+    <div class="upload-zone" id="dropzone">
+      <input type="file" id="fileInput" accept=".pdf">
+      <div class="upload-icon">📄</div>
+      <div class="upload-title">Nahrajte IOLDP</div>
+      <div class="upload-sub">PDF z ePortálu ČSSZ · přetáhněte nebo klikněte</div>
+    </div>
+    <div id="fileInfo" style="display:none" class="file-selected">
+      <span style="font-size:1.5rem">📋</span>
+      <div>
+        <div class="file-name" id="fileName"></div>
+        <div class="file-size" id="fileSize"></div>
+      </div>
+    </div>
+    <div id="uploadError" class="error-box" style="display:none"></div>
+
+    <div class="questions-section" id="questionsSection" style="display:none">
+      <div class="q-title">Doplňující informace</div>
+
+      <div class="q-item">
+        <span class="q-label">Datum narození klienta</span>
+        <input type="date" class="q-input" id="q-datum-narozeni" placeholder="dd.mm.rrrr">
+      </div>
+
+      <div class="q-item">
+        <span class="q-label">Typ příjmu</span>
+        <div class="q-options">
+          <div class="q-opt" data-q="prijem" data-v="zaměstnání" onclick="selectOpt(this)">Zaměstnání</div>
+          <div class="q-opt" data-q="prijem" data-v="osvč-paušál" onclick="selectOpt(this)">OSVČ – paušál</div>
+          <div class="q-opt" data-q="prijem" data-v="osvč-skutečné" onclick="selectOpt(this)">OSVČ – skutečné výdaje</div>
+          <div class="q-opt" data-q="prijem" data-v="kombinace" onclick="selectOpt(this)">Kombinace</div>
+        </div>
+      </div>
+
+      <div class="q-item" id="q-pausal-wrap" style="display:none">
+        <span class="q-label">Výdajový paušál</span>
+        <div class="q-options">
+          <div class="q-opt" data-q="pausal" data-v="80" onclick="selectOpt(this)">80 %</div>
+          <div class="q-opt" data-q="pausal" data-v="60" onclick="selectOpt(this)">60 %</div>
+          <div class="q-opt" data-q="pausal" data-v="40" onclick="selectOpt(this)">40 %</div>
+          <div class="q-opt" data-q="pausal" data-v="30" onclick="selectOpt(this)">30 %</div>
+        </div>
+      </div>
+
+      <div class="q-item">
+        <span class="q-label">Roční obrat / hrubá mzda (Kč)</span>
+        <input type="number" class="q-input" id="q-prijem-val" placeholder="např. 750000">
+      </div>
+
+      <div class="q-item">
+        <span class="q-label">Neevidovaná období — co se dělo a kde? (volitelné)</span>
+        <input type="text" class="q-input" id="q-neevidovano" placeholder="např. práce v USA 2021-2023, OBZP, mateřská, Řecko EU...">
+        <div style="font-size:11px;color:var(--text3);margin-top:4px;font-family:'DM Mono',monospace">Uveďte zemi, typ činnosti a období. Aplikace vyhodnotí nárok dle smlouvy ČR s danou zemí.</div>
+      </div>
+    </div>
+
+    <div class="btn-row" id="analyzeRow" style="display:none">
+      <button class="btn btn-primary" id="analyzeBtn" onclick="startAnalysis()">Analyzovat IOLDP →</button>
+    </div>
+  </div>
+
+  <!-- STEP 2: Loading -->
+  <div class="step" id="step-loading">
+    <div class="loading">
+      <div class="loading-ring"></div>
+      <div class="loading-title">Analyzuji IOLDP</div>
+      <div class="loading-sub" id="loadingMsg">Čtu doby pojištění a vyměřovací základy…</div>
+    </div>
+  </div>
+
+  <!-- STEP 3: Output -->
+  <div class="step" id="step-output">
+    <div id="outputContent"></div>
+    <div class="restart-btn">
+      <button class="btn btn-ghost" onclick="restart()">← Nová analýza</button>
+      <button class="btn btn-ghost" onclick="window.print()">🖨 Tisk / PDF</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const answers = {};
+let pdfBase64 = null;
+
+// Načtení API klíče z localStorage
+window.addEventListener('load', () => {
+  const saved = localStorage.getItem('anthropic_api_key');
+  if (saved) {
+    document.getElementById('apiKeyInput').value = saved;
+    document.getElementById('apiSaved').style.display = 'block';
+  }
+});
+
+function saveApiKey() {
+  const key = document.getElementById('apiKeyInput').value.trim();
+  if (!key) return;
+  localStorage.setItem('anthropic_api_key', key);
+  document.getElementById('apiSaved').style.display = 'block';
+}
+
+function getApiKey() {
+  return document.getElementById('apiKeyInput').value.trim() || localStorage.getItem('anthropic_api_key');
+}
+
+// File handling
+document.getElementById('fileInput').addEventListener('change', e => handleFile(e.target.files[0]));
+const dz = document.getElementById('dropzone');
+dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('drag'); });
+dz.addEventListener('dragleave', () => dz.classList.remove('drag'));
+dz.addEventListener('drop', e => { e.preventDefault(); dz.classList.remove('drag'); handleFile(e.dataTransfer.files[0]); });
+
+function handleFile(file) {
+  if (!file) return;
+  if (file.type !== 'application/pdf') { showError('Prosím nahrajte PDF soubor z ePortálu ČSSZ.'); return; }
+  document.getElementById('fileName').textContent = file.name;
+  document.getElementById('fileSize').textContent = (file.size/1024).toFixed(0) + ' KB';
+  document.getElementById('fileInfo').style.display = 'flex';
+  document.getElementById('questionsSection').style.display = 'block';
+  document.getElementById('analyzeRow').style.display = 'flex';
+  document.getElementById('uploadError').style.display = 'none';
+  const reader = new FileReader();
+  reader.onload = e => { pdfBase64 = e.target.result.split(',')[1]; };
+  reader.readAsDataURL(file);
+}
+
+function showError(msg) {
+  const el = document.getElementById('uploadError');
+  el.textContent = msg;
+  el.style.display = 'block';
+}
+
+function selectOpt(el) {
+  const q = el.dataset.q;
+  document.querySelectorAll(`[data-q="${q}"]`).forEach(e => e.classList.remove('sel'));
+  el.classList.add('sel');
+  answers[q] = el.dataset.v;
+  if (q === 'prijem') {
+    document.getElementById('q-pausal-wrap').style.display =
+      answers.prijem === 'osvč-paušál' ? 'block' : 'none';
+  }
+}
+
+function showStep(id) {
+  document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+const loadingMsgs = [
+  'Čtu doby pojištění a vyměřovací základy…',
+  'Identifikuji neevidovaná období…',
+  'Počítám scénáře důchodu…',
+  'Připravuji výstup a doporučení…'
+];
+
+async function startAnalysis() {
+  const apiKey = getApiKey();
+  if (!apiKey) { showError('Zadejte prosím Anthropic API klíč.'); return; }
+  if (!pdfBase64) { showError('Nahrajte prosím PDF s IOLDP.'); return; }
+  showStep('step-loading');
+  let mi = 0;
+  const msgEl = document.getElementById('loadingMsg');
+  const interval = setInterval(() => { mi=(mi+1)%loadingMsgs.length; msgEl.textContent=loadingMsgs[mi]; }, 2500);
+
+  const prijem = document.getElementById('q-prijem-val').value;
+  const neevidovano = document.getElementById('q-neevidovano').value;
+  const datumNarozeni = document.getElementById('q-datum-narozeni').value;
+  
+  // Calculate age from date of birth
+  let vekText = '';
+  let rokNarozeni = '';
+  let duchRok = '';
+  if (datumNarozeni) {
+    const dob = new Date(datumNarozeni);
+    const today = new Date();
+    const age = Math.floor((today - dob) / (365.25 * 24 * 60 * 60 * 1000));
+    rokNarozeni = dob.getFullYear();
+    duchRok = rokNarozeni + 65;
+    vekText = `- Datum narození: ${dob.toLocaleDateString('cs-CZ')} (věk: ${age} let, důchodový rok: ${duchRok})\n`;
+  }
+
+  let doplneni = 'Doplňující informace od poradce:\n';
+  if (vekText) doplneni += vekText;
+  if (answers.prijem) doplneni += `- Typ příjmu: ${answers.prijem}\n`;
+  if (answers.pausal) doplneni += `- Výdajový paušál: ${answers.pausal} %\n`;
+  if (prijem) doplneni += `- Roční obrat/příjem: ${prijem} Kč (měsíčně: ${Math.round(prijem/12)} Kč)\n`;
+  if (neevidovano) doplneni += `- Neevidovaná období (co klient dělal): ${neevidovano}\n`;
+
+  const prompt = `Jsi expert na český důchodový systém, mezinárodní koordinaci sociálního zabezpečení a finanční analýzu. Analyzuj přiložený IOLDP (Informativní osobní list důchodového pojištění) z ČSSZ.
+
+${doplneni}
+
+Vrať POUZE validní JSON objekt (bez markdown, bez backticks, bez komentářů) s touto přesnou strukturou:
+{
+  "klient": {
+    "vek": číslo nebo null,
+    "rok_narozeni": číslo nebo null,
+    "duchod_vek": 65,
+    "duchod_rok": číslo nebo null,
+    "let_do_duchodu": číslo nebo null
+  },
+  "evidence": {
+    "evidovane_dni": číslo,
+    "evidovane_roky_text": "text",
+    "neevidovane_dni": číslo,
+    "neevidovane_roky_text": "text",
+    "nahradni_dni": číslo,
+    "obdobi": [{"od":"MM/RRRR","do":"MM/RRRR","typ":"text","dny":číslo,"vz":číslo nebo 0,"stav":"ok|problem|rešit|neevidováno"}]
+  },
+  "vz": {
+    "rocni_vz": číslo,
+    "mesicni_vz": číslo,
+    "komentar": "text"
+  },
+  "semafory": [
+    {"barva":"red|amber|green|blue","titulek":"text","text":"text"}
+  ],
+  "scenare": [
+    {"id":"A","titulek":"text","rocni_vz":číslo,"roky_pojisteni":číslo,"duchod_mesicni":číslo,"procento_prijmu":číslo,"poznamka":"text","best":false},
+    {"id":"B","titulek":"text","rocni_vz":číslo,"roky_pojisteni":číslo,"duchod_mesicni":číslo,"procento_prijmu":číslo,"poznamka":"text","best":true},
+    {"id":"C","titulek":"text","rocni_vz":číslo,"roky_pojisteni":číslo,"duchod_mesicni":číslo,"procento_prijmu":číslo,"poznamka":"text","best":false},
+    {"id":"D","titulek":"text","rocni_vz":číslo,"roky_pojisteni":číslo,"duchod_mesicni":číslo,"procento_prijmu":číslo,"poznamka":"text","best":false}
+  ],
+  "propast": {
+    "aktualni_prijem_mesic": číslo,
+    "duchod_scenar_a": číslo,
+    "propast_mesic": číslo,
+    "propast_20let": číslo
+  },
+  "kroky": [
+    {"priorita":"high|medium|low","titulek":"text","text":"text"}
+  ]
+}
+
+Pravidla pro zahraniční doby:
+- EU státy (Německo, Rakousko, Slovensko, Řecko, atd.): koordinace dle EU nařízení 883/2004 - doby se POČÍTAJÍ pro nárok na český důchod, ČSSZ si data vyžádá sama při žádosti
+- USA: ČR má bilaterální smlouvu o soc. zabezpečení s USA od 2009 - doby v USA se POČÍTAJÍ pro nárok, ne pro výši důchodu
+- Kanada: ČR má smlouvu - doby se počítají pro nárok
+- Velká Británie: po Brexitu od 2021 se nové doby NEPOČÍTAJÍ pro nárok automaticky, řeší se individuálně
+- Ostatní státy bez smlouvy: doby se NEPOČÍTAJÍ vůbec
+- OBZP (osoba bez zdanitelných příjmů): platí jen zdravotní pojištění, důchodové NE - doby se NEPOČÍTAJÍ
+- Vždy jasně uveď zda se doba počítá či ne a proč
+
+Pravidla pro dobu studia:
+- Studium PŘED 1. 1. 2010: počítá se jako náhradní doba pojištění, ale POUZE prvních 6 let po dovršení 18 let věku a pouze z 80 % (tzn. 6 let studia = 4,8 roku náhradní doby)
+- Studium PO 1. 1. 2010 (SŠ, VŠ): NEPOČÍTÁ SE jako náhradní doba pojištění vůbec
+- Doktorské studium dokončené po roce 2009: od roku 2026 se počítá jako náhradní doba, max. 4 roky, z 80 %, pouze první úspěšně dokončený doktorát v prezenční formě
+- Vliv na výši důchodu: studium má VZ = 0 Kč (nevydělával/a), ale je to vyloučená doba - NESNIŽUJE průměrný výdělek, jen přidává roky pojištění (z 80 %)
+- Studium v zahraničí: počítá se pouze pokud MŠMT uzná za rovnocenné studiu v ČR
+- Pokud klient studoval před 2010: upozorni že je potřeba mít doklady (index, diplom, vysvědčení) a doložit ČSSZ
+
+Pravidla výpočtu (2026):
+- Základní výměra důchodu: 4 040 Kč/měs.
+- Procentní výměra: počet_let × 1,5 % × PVZB (osobní vyměřovací základ)
+- Redukce PVZB: do 17 121 Kč = 100 %, 17 121–25 168 Kč = 26 %, nad 25 168 Kč = 22 %
+- Min. záloha OSVČ 2026 (hlavní činnost): 5 720 Kč/měs., min. VZ: 19 587 Kč/měs.
+- OSVČ s paušálem 60 %: základ daně = obrat × 0,4; VZ pojistného = základ daně × 0,5; platí se max(VZ ze zisku, min. VZ)
+- Pro výpočet scénářů: scénář A = min. zálohy celou kariéru, B = zálohy z reálného příjmu, C = dobrovolně vyšší VZ, D = odložení důchodu na 67 let
+- Řecko a jiné státy EU: doby se zohlední přes koordinaci EU č. 883/2004, ČSSZ si data vyžádá sama
+- Buď konkrétní, identifikuj reálné problémy z dat v IOLDP`;
+
+  try {
+    // Extract text from PDF using pdf.js
+    let pdfText = '';
+    try {
+      const pdfjsLib = window['pdfjs-dist/build/pdf'];
+      pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+      const loadingTask = pdfjsLib.getDocument({data: atob(pdfBase64)});
+      const pdf = await loadingTask.promise;
+      for (let i = 1; i <= pdf.numPages; i++) {
+        const page = await pdf.getPage(i);
+        const textContent = await page.getTextContent();
+        pdfText += textContent.items.map(item => item.str).join(' ') + '\n';
+      }
+    } catch(e) {
+      pdfText = '[PDF text extraction failed: ' + e.message + ']';
+    }
+
+    const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + apiKey, 'HTTP-Referer': 'https://poradce-dave.github.io', 'X-Title': 'Audit duchodu' },
+      body: JSON.stringify({
+        model: 'anthropic/claude-sonnet-4-5',
+        max_tokens: 4000,
+        messages: [{
+          role: 'user',
+          content: 'Text extrahovaný z IOLDP PDF:\n\n' + pdfText + '\n\n' + prompt
+        }]
+      })
+    });
+    clearInterval(interval);
+    if (!response.ok) {
+      const err = await response.json();
+      throw new Error(err.error?.message || 'API chyba ' + response.status);
+    }
+    const data = await response.json();
+    const raw = (data.choices && data.choices[0] ? data.choices[0].message.content : '') || '';
+    const clean = raw.replace(/```json|```/g,'').trim();
+    const result = JSON.parse(clean);
+    renderOutput(result);
+    showStep('step-output');
+  } catch(err) {
+    clearInterval(interval);
+    showStep('step-upload');
+    showError('Chyba při analýze: ' + err.message);
+  }
+}
+
+function fmt(n) { return n ? Number(n).toLocaleString('cs-CZ') : '–'; }
+
+function renderOutput(d) {
+  const k = d.klient||{};
+  const ev = d.evidence||{};
+  const vz = d.vz||{};
+  const prop = d.propast||{};
+  const badgeMap = {ok:'badge-green',problem:'badge-red','rešit':'badge-amber',neevidováno:'badge-amber'};
+  const labelMap = {ok:'OK',problem:'Problém','rešit':'Řešit',neevidováno:'Neevidováno'};
+  const dotMap = {high:'dot-red',medium:'dot-amber',low:'dot-green'};
+
+  const semaforHtml = (d.semafory||[]).map(s =>
+    `<div class="semafor semafor-${s.barva}"><div class="semafor-title">${s.titulek}</div>${s.text}</div>`
+  ).join('');
+
+  const periodsHtml = (ev.obdobi||[]).map(p =>
+    `<tr><td>${p.od} – ${p.do}</td><td style="color:var(--text)">${p.typ}</td><td>${p.dny||'–'} dní</td><td>${p.vz ? fmt(p.vz)+' Kč' : '–'}</td><td><span class="badge ${badgeMap[p.stav]||'badge-blue'}">${labelMap[p.stav]||p.stav}</span></td></tr>`
+  ).join('');
+
+  const scenareHtml = (d.scenare||[]).map(s =>
+    `<div class="sc-card ${s.best?'best':''}">
+      <div class="sc-title">Scénář ${s.id} — ${s.titulek}</div>
+      <div class="sc-row"><span>Roční VZ</span><span>${fmt(s.rocni_vz)} Kč</span></div>
+      <div class="sc-row"><span>Roky pojištění</span><span>${s.roky_pojisteni} let</span></div>
+      <div class="sc-row"><span>Orientační důchod</span><span>${fmt(s.duchod_mesicni)} Kč/měs.</span></div>
+      <div class="sc-row"><span>% z příjmu</span><span>${s.procento_prijmu} %</span></div>
+      <div class="sc-note">${s.poznamka}</div>
+    </div>`
+  ).join('');
+
+  const krokyHtml = (d.kroky||[]).map(kr =>
+    `<div class="action"><div class="action-dot ${dotMap[kr.priorita]||'dot-blue'}"></div>
+    <div class="action-text"><strong>${kr.titulek}</strong> — ${kr.text}</div></div>`
+  ).join('');
+
+  document.getElementById('outputContent').innerHTML = `
+    <div class="output-header">
+      <div class="output-label-sm">Výstup auditu důchodu</div>
+      <div class="output-title">Analýza IOLDP</div>
+      <div class="output-date">Zpracováno ${new Date().toLocaleDateString('cs-CZ')}</div>
+    </div>
+    <div class="metrics">
+      <div class="metric"><div class="metric-label">Věk</div><div class="metric-value">${k.vek||'–'}</div><div class="metric-sub">nar. ${k.rok_narozeni||'–'}</div></div>
+      <div class="metric"><div class="metric-label">Důchodový věk</div><div class="metric-value">${k.duchod_vek||65} let</div><div class="metric-sub">rok ${k.duchod_rok||'–'}</div></div>
+      <div class="metric"><div class="metric-label">Evidováno</div><div class="metric-value">${ev.evidovane_dni||'–'} dní</div><div class="metric-sub">${ev.evidovane_roky_text||''}</div></div>
+      <div class="metric"><div class="metric-label">Neevidováno</div><div class="metric-value">${ev.neevidovane_dni||'–'} dní</div><div class="metric-sub">${ev.neevidovane_roky_text||''}</div></div>
+      <div class="metric"><div class="metric-label">Měs. VZ</div><div class="metric-value">${fmt(vz.mesicni_vz)} Kč</div><div class="metric-sub">${vz.komentar||''}</div></div>
+    </div>
+    <div class="section">
+      <div class="section-head">Semafor auditu</div>
+      ${semaforHtml}
+    </div>
+    <div class="section">
+      <div class="section-head">Přehled evidovaných období</div>
+      <table class="period-table">
+        <thead><tr><th>Období</th><th>Typ</th><th>Dny</th><th>Vyměřovací základ</th><th>Stav</th></tr></thead>
+        <tbody>${periodsHtml}</tbody>
+      </table>
+    </div>
+    <div class="section">
+      <div class="section-head">Scénáře k roku ${k.duchod_rok||2065} — orientační</div>
+      <div style="font-size:12px;color:var(--text3);margin-bottom:12px;font-family:'DM Mono',monospace">Nezohledňují valorizace, inflaci ani legislativní změny.</div>
+      <div class="scenarios">${scenareHtml}</div>
+    </div>
+    <div class="section">
+      <div class="section-head">Propast mezi příjmem a důchodem</div>
+      <div class="propast-row"><span>Aktuální příjem (měsíčně)</span><span>${fmt(prop.aktualni_prijem_mesic)} Kč</span></div>
+      <div class="propast-row"><span>Scénář A — orientační důchod</span><span style="color:var(--red)">${fmt(prop.duchod_scenar_a)} Kč/měs.</span></div>
+      <div class="propast-row propast-highlight"><span>Propast (měsíčně)</span><span>${fmt(prop.propast_mesic)} Kč/měs.</span></div>
+      <div class="propast-row propast-highlight"><span>Propast (20 let čerpání)</span><span>${fmt(prop.propast_20let)} Kč</span></div>
+    </div>
+    <div class="section">
+      <div class="section-head">Doporučené kroky</div>
+      <div class="action-list">${krokyHtml}</div>
+    </div>
+    <div class="disclaimer">
+      Upozornění: Výpočty jsou orientační. Přesný výpočet provede ČSSZ při žádosti o důchod.<br>
+      Nezohledňují valorizace, inflaci ani budoucí legislativní změny.<br>
+      Min. záloha OSVČ 2026 (hlavní činnost): 5 720 Kč/měs. | Min. VZ: 19 587 Kč/měs.
+    </div>`;
+}
+
+function restart() {
+  pdfBase64 = null;
+  Object.keys(answers).forEach(k => delete answers[k]);
+  document.getElementById('fileInput').value = '';
+  document.getElementById('fileInfo').style.display = 'none';
+  document.getElementById('questionsSection').style.display = 'none';
+  document.getElementById('analyzeRow').style.display = 'none';
+  document.getElementById('uploadError').style.display = 'none';
+  document.querySelectorAll('.q-opt').forEach(e => e.classList.remove('sel'));
+  document.getElementById('q-prijem-val').value = '';
+  document.getElementById('q-neevidovano').value = '';
+  document.getElementById('q-pausal-wrap').style.display = 'none';
+  showStep('step-upload');
+}
+</script>
+</body>
+</html>
