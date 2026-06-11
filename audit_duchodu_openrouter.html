@@ -1,0 +1,960 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Audit starobního důchodu</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#0F0F0E;--bg2:#1A1A18;--bg3:#242422;--border:#2E2E2C;
+  --text:#F0EDE8;--text2:#9A9790;--text3:#5A5855;
+  --accent:#C8A96E;--red:#E05C5C;--amber:#E0A050;--green:#6DB87A;--blue:#6A9FD4;
+}
+body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min-height:100vh;padding:2rem 1rem}
+.app{max-width:780px;margin:0 auto}
+.header{margin-bottom:2.5rem;padding-bottom:1.5rem;border-bottom:1px solid var(--border)}
+.header-label{font-family:'DM Mono',monospace;font-size:11px;color:var(--accent);letter-spacing:.15em;text-transform:uppercase;margin-bottom:.75rem}
+.header-title{font-family:'DM Serif Display',serif;font-size:2.2rem;color:var(--text);line-height:1.1;margin-bottom:.5rem}
+.header-sub{font-size:14px;color:var(--text2);line-height:1.6}
+.api-section{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:1.25rem;margin-bottom:1.5rem}
+.api-label{font-family:'DM Mono',monospace;font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.1em;margin-bottom:.5rem;display:block}
+.api-row{display:flex;gap:10px;align-items:center}
+.api-input{flex:1;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:10px 14px;color:var(--text);font-size:13px;font-family:'DM Mono',monospace;outline:none;transition:border .15s}
+.api-input:focus{border-color:var(--accent)}
+.api-input::placeholder{color:var(--text3)}
+.api-saved{font-size:12px;color:var(--green);margin-top:6px}
+.step{display:none}.step.active{display:block}
+.upload-zone{border:1px dashed var(--border);border-radius:12px;padding:1.5rem;text-align:center;cursor:pointer;transition:all .2s;position:relative;background:var(--bg2)}
+.upload-zone:hover,.upload-zone.drag{border-color:var(--accent);background:var(--bg3)}
+.upload-zone input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+.file-item{display:flex;align-items:center;gap:10px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:10px 14px;margin-bottom:6px}
+.file-item-icon{font-size:1.2rem;flex-shrink:0}
+.file-item-name{font-size:13px;color:var(--text);font-weight:500}
+.file-item-size{font-size:11px;color:var(--text2)}
+.questions-section{margin-top:1.5rem}
+.q-title{font-family:'DM Serif Display',serif;font-size:1.1rem;margin-bottom:1.25rem;color:var(--text)}
+.q-item{margin-bottom:1.25rem}
+.q-label{display:block;font-family:'DM Mono',monospace;font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:.5rem}
+.q-options{display:flex;flex-wrap:wrap;gap:8px}
+.q-opt{padding:7px 16px;border:1px solid var(--border);border-radius:8px;font-size:13px;cursor:pointer;color:var(--text2);background:var(--bg2);transition:all .15s}
+.q-opt:hover{border-color:var(--accent);color:var(--text)}
+.q-opt.sel{border-color:var(--accent);color:var(--accent);background:rgba(200,169,110,.08)}
+.q-input{width:100%;background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:10px 14px;color:var(--text);font-size:13px;font-family:'DM Sans',sans-serif;outline:none;transition:border .15s}
+.q-input:focus{border-color:var(--accent)}
+.q-input::placeholder{color:var(--text3)}
+.btn{padding:11px 26px;border:none;border-radius:10px;font-size:14px;font-weight:500;cursor:pointer;transition:all .2s;font-family:'DM Sans',sans-serif}
+.btn-primary{background:var(--accent);color:#0F0F0E}
+.btn-primary:hover{background:#d4b87a;transform:translateY(-1px)}
+.btn-primary:disabled{opacity:.4;cursor:not-allowed;transform:none}
+.btn-ghost{background:transparent;border:1px solid var(--border);color:var(--text2)}
+.btn-ghost:hover{border-color:var(--text2);color:var(--text)}
+.btn-save{background:var(--bg3);border:1px solid var(--border);color:var(--text2);padding:10px 18px;border-radius:8px;font-size:13px;cursor:pointer;font-family:'DM Sans',sans-serif}
+.btn-save:hover{border-color:var(--accent);color:var(--accent)}
+.btn-row{display:flex;gap:12px;margin-top:1.5rem;align-items:center}
+.loading{text-align:center;padding:4rem 2rem}
+.loading-ring{width:48px;height:48px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin 1s linear infinite;margin:0 auto 1.5rem}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading-title{font-family:'DM Serif Display',serif;font-size:1.3rem;margin-bottom:.5rem}
+.loading-sub{font-size:13px;color:var(--text2)}
+.output-header{margin-bottom:2rem;padding-bottom:1.5rem;border-bottom:1px solid var(--border)}
+.output-label-sm{font-family:'DM Mono',monospace;font-size:11px;color:var(--accent);letter-spacing:.1em;text-transform:uppercase;margin-bottom:.5rem}
+.output-title{font-family:'DM Serif Display',serif;font-size:1.8rem;margin-bottom:.25rem}
+.output-date{font-size:12px;color:var(--text3)}
+.metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:1.25rem}
+.metric{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:14px}
+.metric-label{font-size:10px;color:var(--text3);margin-bottom:6px;font-family:'DM Mono',monospace;text-transform:uppercase;letter-spacing:.05em}
+.metric-value{font-size:1.3rem;font-weight:600;color:var(--text)}
+.metric-sub{font-size:11px;color:var(--text2);margin-top:3px}
+.section{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:1.25rem;margin-bottom:1rem}
+.section-head{font-family:'DM Mono',monospace;font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.1em;margin-bottom:1rem}
+.semafor{border-left:2px solid;border-radius:0 8px 8px 0;padding:10px 14px;margin-bottom:.75rem;font-size:13px;line-height:1.5}
+.semafor:last-child{margin-bottom:0}
+.semafor-red{background:rgba(224,92,92,.08);border-color:var(--red);color:#f0b0b0}
+.semafor-amber{background:rgba(224,160,80,.08);border-color:var(--amber);color:#f0c890}
+.semafor-green{background:rgba(109,184,122,.08);border-color:var(--green);color:#a0d4a8}
+.semafor-blue{background:rgba(106,159,212,.08);border-color:var(--blue);color:#a8c8e8}
+.semafor-title{font-weight:600;margin-bottom:3px;font-size:13px}
+.period-table{width:100%;border-collapse:collapse;font-size:13px}
+.period-table th{text-align:left;padding:6px 8px;font-family:'DM Mono',monospace;font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid var(--border)}
+.period-table td{padding:8px;border-bottom:1px solid rgba(46,46,44,.5);color:var(--text2)}
+.period-table td:first-child{font-family:'DM Mono',monospace;font-size:11px;color:var(--text3)}
+.period-table tr:last-child td{border-bottom:none}
+.badge{display:inline-block;padding:2px 9px;border-radius:6px;font-size:11px;font-weight:500;font-family:'DM Mono',monospace}
+.badge-red{background:rgba(224,92,92,.15);color:#f0a0a0}
+.badge-amber{background:rgba(224,160,80,.15);color:#f0c070}
+.badge-green{background:rgba(109,184,122,.15);color:#90d498}
+.badge-blue{background:rgba(106,159,212,.15);color:#90c0e8}
+.scenarios{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:.5rem}
+.sc-card{background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:14px}
+.sc-card.best{border-color:rgba(109,184,122,.35);background:rgba(109,184,122,.04)}
+.sc-title{font-size:12px;font-weight:600;color:var(--text);margin-bottom:10px}
+.sc-card.best .sc-title{color:#90d498}
+.sc-row{display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px;gap:8px}
+.sc-row span:first-child{color:var(--text3)}
+.sc-row span:last-child{color:var(--text);font-weight:500;text-align:right}
+.sc-card.best .sc-row span:last-child{color:#90d498}
+.sc-note{font-size:11px;color:var(--text3);margin-top:8px;line-height:1.4}
+.propast-row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px;gap:12px}
+.propast-row:last-child{border-bottom:none}
+.propast-row span:first-child{color:var(--text2)}
+.propast-highlight span:last-child{color:var(--red);font-weight:600}
+.action-list .action{display:flex;gap:12px;padding:10px 0;border-bottom:1px solid var(--border);font-size:13px;line-height:1.5}
+.action-list .action:last-child{border-bottom:none}
+.action-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;margin-top:5px}
+.dot-red{background:var(--red)}.dot-amber{background:var(--amber)}.dot-green{background:var(--green)}.dot-blue{background:var(--blue)}
+.action-text{color:var(--text2)}.action-text strong{color:var(--text);font-weight:500}
+.nee-row{display:grid;grid-template-columns:135px 135px 1fr auto;gap:8px;align-items:start;margin-bottom:10px}
+.nee-row input,.nee-row select{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:8px 10px;color:var(--text);font-size:12px;font-family:'DM Sans',sans-serif;outline:none;width:100%}
+.nee-row input:focus,.nee-row select:focus{border-color:var(--accent)}
+.nee-del{background:none;border:none;color:var(--text3);cursor:pointer;font-size:16px;padding:4px;transition:color .15s}
+.nee-del:hover{color:var(--red)}
+.typ-row{display:grid;grid-template-columns:1fr 1fr auto;gap:8px;align-items:center;margin-bottom:8px}
+.typ-row select,.typ-row input{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:8px 10px;color:var(--text);font-size:12px;font-family:'DM Sans',sans-serif;outline:none;width:100%}
+.typ-note{grid-column:1/-1;font-size:11px;font-family:'DM Mono',monospace;margin-top:-4px;padding:4px 8px;border-radius:6px}
+.typ-note.ok{color:#90d498;background:rgba(109,184,122,.08)}
+.typ-note.warn{color:#f0c890;background:rgba(224,160,80,.08)}
+.typ-note.err{color:#f0a0a0;background:rgba(224,92,92,.08)}
+.error-box{background:rgba(224,92,92,.08);border:1px solid rgba(224,92,92,.3);border-radius:10px;padding:1rem 1.25rem;font-size:13px;color:#f0b0b0;margin-top:1rem}
+.restart-btn{margin-top:2rem;padding-top:1.5rem;border-top:1px solid var(--border);display:flex;gap:12px;align-items:center}
+.disclaimer{font-size:11px;color:var(--text3);margin-top:1.5rem;line-height:1.6;font-family:'DM Mono',monospace}
+@media print{
+  body{background:#fff;color:#000;padding:0}
+  .btn,.restart-btn,.api-section{display:none}
+  .section,.metric,.sc-card{border:1px solid #ddd;background:#fff}
+  .semafor-red{background:#fff0f0;border-color:#e05c5c;color:#900}
+  .semafor-amber{background:#fff8f0;border-color:#e0a050;color:#840}
+  .semafor-green{background:#f0fff0;border-color:#6db87a;color:#060}
+  .semafor-blue{background:#f0f4ff;border-color:#6a9fd4;color:#039}
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="header">
+    <div class="header-label">Nástroj finančního poradce</div>
+    <div class="header-title">Audit starobního důchodu</div>
+    <div class="header-sub">Nahrajte IOLDP nebo screenshot z Moje konto — nebo obojí pro nejpřesnější výsledek.</div>
+  </div>
+
+  <!-- API KEY -->
+  <div class="api-section">
+    <span class="api-label">OpenRouter API klíč</span>
+    <div class="api-row">
+      <input type="password" class="api-input" id="apiKeyInput" placeholder="sk-or-..." autocomplete="off">
+      <button class="btn-save" id="btnSaveKey">Uložit</button>
+    </div>
+    <div class="api-saved" id="apiSaved" style="display:none">✓ API klíč uložen lokálně</div>
+  </div>
+
+  <!-- STEP 1: Upload + form -->
+  <div class="step active" id="step-upload">
+
+    <!-- Upload zones -->
+    <div style="margin-bottom:10px">
+      <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.1em;margin-bottom:6px">📄 IOLDP — PDF z ePortálu ČSSZ (volitelné)</div>
+      <div class="upload-zone" id="dropzone-pdf">
+        <input type="file" id="fileInputPdf" accept=".pdf">
+        <div style="font-size:1.5rem;margin-bottom:4px;opacity:.5">📄</div>
+        <div style="font-size:13px;color:var(--text2)">Klikněte nebo přetáhněte PDF</div>
+      </div>
+      <div id="fileInfoPdf" style="display:none;margin-top:6px"><div id="fileListPdf"></div></div>
+    </div>
+
+    <div style="margin-bottom:14px">
+      <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.1em;margin-bottom:6px">📸 Moje konto — screenshot(y) z ePortálu ČSSZ (volitelné)</div>
+      <div class="upload-zone" id="dropzone-img">
+        <input type="file" id="fileInputImg" accept="image/*" multiple>
+        <div style="font-size:1.5rem;margin-bottom:4px;opacity:.5">📸</div>
+        <div style="font-size:13px;color:var(--text2)">Klikněte nebo přetáhněte obrázky · více najednou</div>
+      </div>
+      <div id="fileInfoImg" style="display:none;margin-top:6px"><div id="fileListImg"></div></div>
+    </div>
+
+    <div id="uploadError" class="error-box" style="display:none"></div>
+
+    <!-- Form -->
+    <div class="questions-section" id="questionsSection" style="display:none">
+      <div class="q-title">Doplňující informace</div>
+
+      <div class="q-item">
+        <span class="q-label">Datum narození klienta</span>
+        <input type="date" class="q-input" id="q-dob">
+      </div>
+
+      <div class="q-item">
+        <span class="q-label">Pohlaví</span>
+        <div class="q-options">
+          <div class="q-opt" data-q="pohlavi" data-v="muž" onclick="selectOpt(this)">Muž</div>
+          <div class="q-opt" data-q="pohlavi" data-v="žena" onclick="selectOpt(this)">Žena</div>
+        </div>
+      </div>
+
+      <div class="q-item" id="q-deti-wrap" style="display:none">
+        <span class="q-label">Počet vychovaných dětí</span>
+        <div class="q-options">
+          <div class="q-opt" data-q="deti" data-v="0" onclick="selectOpt(this)">0</div>
+          <div class="q-opt" data-q="deti" data-v="1" onclick="selectOpt(this)">1</div>
+          <div class="q-opt" data-q="deti" data-v="2" onclick="selectOpt(this)">2</div>
+          <div class="q-opt" data-q="deti" data-v="3" onclick="selectOpt(this)">3</div>
+          <div class="q-opt" data-q="deti" data-v="4" onclick="selectOpt(this)">4</div>
+          <div class="q-opt" data-q="deti" data-v="5+" onclick="selectOpt(this)">5+</div>
+        </div>
+      </div>
+
+      <div class="q-item">
+        <span class="q-label">Typ příjmu</span>
+        <div class="q-options">
+          <div class="q-opt" data-q="prijem" data-v="zaměstnání" onclick="selectOpt(this)">Zaměstnání</div>
+          <div class="q-opt" data-q="prijem" data-v="osvč-paušál" onclick="selectOpt(this)">OSVČ – paušál</div>
+          <div class="q-opt" data-q="prijem" data-v="osvč-skutečné" onclick="selectOpt(this)">OSVČ – skutečné výdaje</div>
+          <div class="q-opt" data-q="prijem" data-v="kombinace" onclick="selectOpt(this)">Kombinace</div>
+        </div>
+      </div>
+
+      <div class="q-item" id="q-pausal-wrap" style="display:none">
+        <span class="q-label">Výdajový paušál</span>
+        <div class="q-options">
+          <div class="q-opt" data-q="pausal" data-v="80" onclick="selectOpt(this)">80 %</div>
+          <div class="q-opt" data-q="pausal" data-v="60" onclick="selectOpt(this)">60 %</div>
+          <div class="q-opt" data-q="pausal" data-v="40" onclick="selectOpt(this)">40 %</div>
+          <div class="q-opt" data-q="pausal" data-v="30" onclick="selectOpt(this)">30 %</div>
+        </div>
+      </div>
+
+      <div class="q-item" id="q-pracovni-typ-wrap" style="display:none">
+        <span class="q-label">Upřesnění typu pracovního vztahu</span>
+        <div style="font-size:11px;color:var(--text3);margin-bottom:8px;font-family:'DM Mono',monospace">IOLDP nerozlišuje HPP, DPP a DPČ. Upřesněte pokud víte.</div>
+        <div id="pracovni-typ-list"></div>
+        <button type="button" onclick="addPracovniTyp()" style="margin-top:8px;padding:7px 16px;border:1px dashed var(--border);border-radius:8px;font-size:13px;cursor:pointer;color:var(--text2);background:transparent;font-family:'DM Sans',sans-serif">+ Přidat upřesnění</button>
+      </div>
+
+      <div class="q-item">
+        <span class="q-label">Roční obrat / hrubá mzda (Kč)</span>
+        <input type="number" class="q-input" id="q-prijem-val" placeholder="např. 750000">
+      </div>
+
+      <div class="q-item">
+        <span class="q-label">Neevidovaná období</span>
+        <div style="font-size:11px;color:var(--text3);margin-bottom:8px;font-family:'DM Mono',monospace">Přidejte každé období zvlášť. Aplikace vyhodnotí nárok dle smlouvy ČR s danou zemí.</div>
+        <div id="neevidovano-list"></div>
+        <button type="button" onclick="addNeevidovano()" style="margin-top:8px;padding:7px 16px;border:1px dashed var(--border);border-radius:8px;font-size:13px;cursor:pointer;color:var(--text2);background:transparent;font-family:'DM Sans',sans-serif">+ Přidat období</button>
+      </div>
+    </div>
+
+    <div class="btn-row" id="analyzeRow" style="display:none">
+      <button class="btn btn-primary" id="analyzeBtn" onclick="startAnalysis()">Analyzovat →</button>
+    </div>
+  </div>
+
+  <!-- STEP 2: Loading -->
+  <div class="step" id="step-loading">
+    <div class="loading">
+      <div class="loading-ring"></div>
+      <div class="loading-title">Analyzuji data</div>
+      <div class="loading-sub" id="loadingMsg">Čtu doby pojištění…</div>
+    </div>
+  </div>
+
+  <!-- STEP 3: Output -->
+  <div class="step" id="step-output">
+    <div id="outputContent"></div>
+    <div class="restart-btn">
+      <button class="btn btn-ghost" onclick="restart()">← Nová analýza</button>
+      <button class="btn btn-ghost" onclick="window.print()">🖨 Tisk / PDF</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ─── State ───────────────────────────────────────────────────────────────────
+const answers = {};
+let pdfBase64 = null;
+let imageFiles = [];
+let pdfText = '';
+let neevidovanoItems = [];
+let pracovniTypItems = [];
+
+// ─── Init ─────────────────────────────────────────────────────────────────────
+window.addEventListener('load', () => {
+  const saved = localStorage.getItem('anthropic_api_key');
+  if (saved) {
+    document.getElementById('apiKeyInput').value = saved;
+    document.getElementById('apiSaved').style.display = 'block';
+  }
+
+  // PDF upload
+  document.getElementById('fileInputPdf').addEventListener('change', function() {
+    if (this.files && this.files[0]) handlePdfFile(this.files[0]);
+  });
+
+  // Image upload
+  document.getElementById('fileInputImg').addEventListener('change', function() {
+    if (this.files && this.files.length > 0) handleImgFiles(this.files);
+  });
+
+  // Drag & drop PDF
+  const dzPdf = document.getElementById('dropzone-pdf');
+  dzPdf.addEventListener('dragover', e => { e.preventDefault(); dzPdf.classList.add('drag'); });
+  dzPdf.addEventListener('dragleave', () => dzPdf.classList.remove('drag'));
+  dzPdf.addEventListener('drop', e => {
+    e.preventDefault(); dzPdf.classList.remove('drag');
+    if (e.dataTransfer.files[0]) handlePdfFile(e.dataTransfer.files[0]);
+  });
+
+  // Drag & drop images
+  const dzImg = document.getElementById('dropzone-img');
+  dzImg.addEventListener('dragover', e => { e.preventDefault(); dzImg.classList.add('drag'); });
+  dzImg.addEventListener('dragleave', () => dzImg.classList.remove('drag'));
+  dzImg.addEventListener('drop', e => {
+    e.preventDefault(); dzImg.classList.remove('drag');
+    if (e.dataTransfer.files.length > 0) handleImgFiles(e.dataTransfer.files);
+  });
+
+  // Save API key button
+  document.getElementById('btnSaveKey').addEventListener('click', saveApiKey);
+});
+
+// ─── API Key ──────────────────────────────────────────────────────────────────
+function saveApiKey() {
+  const key = document.getElementById('apiKeyInput').value.trim();
+  if (!key) return;
+  localStorage.setItem('anthropic_api_key', key);
+  document.getElementById('apiSaved').style.display = 'block';
+}
+function getApiKey() {
+  return document.getElementById('apiKeyInput').value.trim() || localStorage.getItem('anthropic_api_key') || '';
+}
+
+// ─── File handlers ────────────────────────────────────────────────────────────
+async function handlePdfFile(file) {
+  if (file.type !== 'application/pdf') { showError('Prosím nahrajte PDF soubor.'); return; }
+  hideError();
+  pdfBase64 = null;
+  pdfText = '';
+  document.getElementById('fileListPdf').innerHTML = '';
+
+  appendFileItem('fileListPdf', '📋', file.name, file.size);
+  document.getElementById('fileInfoPdf').style.display = 'block';
+
+  const reader = new FileReader();
+  reader.onload = async function(e) {
+    pdfBase64 = e.target.result.split(',')[1];
+    await extractPdfText();
+    await extractNeevidovanePeriods();
+    checkShowForm();
+  };
+  reader.readAsDataURL(file);
+}
+
+async function handleImgFiles(fileList) {
+  const valid = Array.from(fileList).filter(f => f.type.startsWith('image/'));
+  if (valid.length === 0) { showError('Prosím nahrajte obrázky (PNG, JPG).'); return; }
+  hideError();
+  imageFiles = [];
+  document.getElementById('fileListImg').innerHTML = '';
+
+  for (const file of valid) {
+    appendFileItem('fileListImg', '🖼️', file.name, file.size);
+    const b64 = await readFileAsBase64(file);
+    imageFiles.push({ name: file.name, base64: b64, mediaType: file.type });
+  }
+  document.getElementById('fileInfoImg').style.display = 'block';
+  checkShowForm();
+}
+
+function readFileAsBase64(file) {
+  return new Promise((resolve) => {
+    const r = new FileReader();
+    r.onload = e => resolve(e.target.result.split(',')[1]);
+    r.readAsDataURL(file);
+  });
+}
+
+function appendFileItem(listId, icon, name, size) {
+  const list = document.getElementById(listId);
+  const item = document.createElement('div');
+  item.className = 'file-item';
+  item.innerHTML = '<span class="file-item-icon">' + icon + '</span><div><div class="file-item-name">' + name + '</div><div class="file-item-size">' + (size/1024).toFixed(0) + ' KB</div></div>';
+  list.appendChild(item);
+}
+
+function checkShowForm() {
+  if (pdfBase64 || imageFiles.length > 0) {
+    document.getElementById('questionsSection').style.display = 'block';
+    document.getElementById('analyzeRow').style.display = 'flex';
+  }
+}
+
+// ─── PDF text extraction ──────────────────────────────────────────────────────
+async function extractPdfText() {
+  if (!pdfBase64) return;
+  try {
+    const pdfjsLib = window['pdfjs-dist/build/pdf'];
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    const loadingTask = pdfjsLib.getDocument({ data: atob(pdfBase64) });
+    const pdf = await loadingTask.promise;
+    let text = '';
+    for (let i = 1; i <= pdf.numPages; i++) {
+      const page = await pdf.getPage(i);
+      const tc = await page.getTextContent();
+      text += tc.items.map(it => it.str).join(' ') + '\n';
+    }
+    pdfText = text;
+  } catch(e) {
+    pdfText = '[PDF text extraction failed: ' + e.message + ']';
+  }
+}
+
+async function extractNeevidovanePeriods() {
+  if (!pdfText) return;
+  try {
+    const section = pdfText.match(/neevidovan[^]*?Celkov[ýý] po[cč]et neevidovan/i);
+    if (!section) return;
+    const datePattern = /(\d{1,2}[./]\d{1,2}[./]\d{4})\s+(\d{1,2}[./]\d{1,2}[./]\d{4})\s+(\d+)/g;
+    let match;
+    const periods = [];
+    while ((match = datePattern.exec(section[0])) !== null) {
+      const od = parseCzDate(match[1]);
+      const doo = parseCzDate(match[2]);
+      const dny = parseInt(match[3]);
+      if (od && doo && dny > 0) periods.push({ od, doo, dny });
+    }
+    if (periods.length > 0) {
+      document.getElementById('neevidovano-list').innerHTML = '';
+      neevidovanoItems = [];
+      periods.forEach(p => addNeevidovanoWithDates(p.od, p.doo));
+    }
+  } catch(e) { /* silent fail */ }
+}
+
+function parseCzDate(str) {
+  const m = str.match(/(\d{1,2})[./](\d{1,2})[./](\d{4})/);
+  if (!m) return null;
+  return m[3] + '-' + m[2].padStart(2,'0') + '-' + m[1].padStart(2,'0');
+}
+
+// ─── Form helpers ─────────────────────────────────────────────────────────────
+function selectOpt(el) {
+  const q = el.dataset.q;
+  document.querySelectorAll('[data-q="' + q + '"]').forEach(e => e.classList.remove('sel'));
+  el.classList.add('sel');
+  answers[q] = el.dataset.v;
+  if (q === 'pohlavi') document.getElementById('q-deti-wrap').style.display = answers.pohlavi === 'žena' ? 'block' : 'none';
+  if (q === 'prijem') {
+    document.getElementById('q-pausal-wrap').style.display = answers.prijem === 'osvč-paušál' ? 'block' : 'none';
+    document.getElementById('q-pracovni-typ-wrap').style.display = ['zaměstnání','kombinace'].includes(answers.prijem) ? 'block' : 'none';
+  }
+}
+
+// ─── Neevidovano ──────────────────────────────────────────────────────────────
+function neevidovanoOptions() {
+  return ['neznámé','práce v EU','práce v USA','práce v Kanadě','práce ve Velké Británii','práce v jiné zemi (mimo EU/smlouvu)','OBZP','mateřská/rodičovská','péče o závislou osobu','studium','doktorské studium','evidence na ÚP (bez podpory)','nemoc/invalidita','jiné'];
+}
+
+function addNeevidovano() { addNeevidovanoWithDates('', ''); }
+
+function addNeevidovanoWithDates(od, doo) {
+  const id = Date.now() + Math.random();
+  neevidovanoItems.push(id);
+  const list = document.getElementById('neevidovano-list');
+  const row = document.createElement('div');
+  row.className = 'nee-row';
+  row.id = 'nee-' + id;
+  const opts = neevidovanoOptions().map(o => '<option value="' + o + '">' + o + '</option>').join('');
+  row.innerHTML = '<input type="date" class="nee-od" value="' + (od||'') + '" title="Datum od">'
+    + '<input type="date" class="nee-do" value="' + (doo||'') + '" title="Datum do">'
+    + '<select class="nee-duvod"><option value="">— Důvod —</option>' + opts + '</select>'
+    + '<button class="nee-del" onclick="removeNeevidovano(\'' + id + '\')" title="Odebrat">✕</button>';
+  list.appendChild(row);
+
+  const updateDays = () => {
+    const o = row.querySelector('.nee-od').value;
+    const d = row.querySelector('.nee-do').value;
+    let el = row.querySelector('.nee-days');
+    if (!el) {
+      el = document.createElement('div');
+      el.className = 'nee-days';
+      el.style.cssText = 'grid-column:1/3;font-size:11px;color:var(--accent);font-family:"DM Mono",monospace;margin-top:-6px';
+      row.insertBefore(el, row.querySelector('.nee-duvod'));
+    }
+    if (o && d) {
+      const diff = Math.round((new Date(d) - new Date(o)) / 86400000);
+      el.textContent = diff > 0 ? '→ ' + diff + ' dní' : '';
+    }
+  };
+  row.querySelector('.nee-od').addEventListener('change', updateDays);
+  row.querySelector('.nee-do').addEventListener('change', updateDays);
+  if (od && doo) updateDays();
+
+  row.querySelector('.nee-duvod').addEventListener('change', function() {
+    const ex = row.querySelector('.nee-extra');
+    if (ex) ex.remove();
+    if (this.value.includes('EU') || this.value.includes('Británii') || this.value.includes('zemi') || this.value === 'jiné') {
+      const inp = document.createElement('input');
+      inp.type = 'text';
+      inp.className = 'nee-extra q-input';
+      inp.placeholder = this.value === 'jiné' ? 'Upřesněte...' : 'Upřesněte zemi...';
+      inp.style.cssText = 'grid-column:1/-1;margin-top:-4px;font-size:12px';
+      row.appendChild(inp);
+    }
+  });
+}
+
+function removeNeevidovano(id) {
+  const el = document.getElementById('nee-' + id);
+  if (el) el.remove();
+}
+
+function getNeevidovanoText() {
+  const rows = document.querySelectorAll('.nee-row');
+  if (!rows.length) return '';
+  let txt = '';
+  rows.forEach(row => {
+    const od = row.querySelector('.nee-od').value;
+    const doo = row.querySelector('.nee-do').value;
+    const duvod = row.querySelector('.nee-duvod').value;
+    const extra = row.querySelector('.nee-extra') ? row.querySelector('.nee-extra').value : '';
+    if (od || doo || duvod) {
+      const diff = (od && doo) ? Math.round((new Date(doo)-new Date(od))/86400000) : 0;
+      const duvodStr = extra ? duvod + ' – ' + extra : duvod;
+      txt += '  • ' + (od ? new Date(od).toLocaleDateString('cs-CZ') : '?') + ' – ' + (doo ? new Date(doo).toLocaleDateString('cs-CZ') : '?') + (diff > 0 ? ' (' + diff + ' dní)' : '') + ': ' + duvodStr + '\n';
+    }
+  });
+  return txt;
+}
+
+// ─── Pracovni typ ─────────────────────────────────────────────────────────────
+function addPracovniTyp() {
+  const id = Date.now();
+  pracovniTypItems.push(id);
+  const list = document.getElementById('pracovni-typ-list');
+  const row = document.createElement('div');
+  row.className = 'typ-row';
+  row.id = 'typ-' + id;
+  row.innerHTML = '<select class="typ-druh" onchange="updateTypNote(' + id + ')">'
+    + '<option value="">— Typ vztahu —</option>'
+    + '<option value="HPP">HPP</option>'
+    + '<option value="DPP-nad">DPP nad limit (nad 10 000/11 500 Kč)</option>'
+    + '<option value="DPP-pod">DPP pod limit (do 10 000/11 500 Kč)</option>'
+    + '<option value="DPČ-nad">DPČ nad limit (nad 3 999 Kč)</option>'
+    + '<option value="DPČ-pod">DPČ pod limit (do 3 999 Kč)</option>'
+    + '<option value="jednatel-pojištěn">Jednatel s.r.o. — pojištěn</option>'
+    + '<option value="jednatel-nepojištěn">Jednatel s.r.o. — nepojištěn</option>'
+    + '</select>'
+    + '<input type="text" placeholder="Zaměstnavatel (volitelné)" class="typ-popis q-input" style="font-size:12px">'
+    + '<button class="nee-del" onclick="removePracovniTyp(' + id + ')">✕</button>';
+  list.appendChild(row);
+}
+
+function updateTypNote(id) {
+  const row = document.getElementById('typ-' + id);
+  const druh = row.querySelector('.typ-druh').value;
+  const ex = row.querySelector('.typ-note');
+  if (ex) ex.remove();
+  const notes = {
+    'HPP': {cls:'ok', text:'✓ Plná účast na DP — počítá se'},
+    'DPP-nad': {cls:'ok', text:'✓ Nad limitem — vzniká účast na DP, počítá se (limit: do 2023 = 10 000 Kč, 2025+ = 11 500/12 000 Kč)'},
+    'DPP-pod': {cls:'err', text:'✗ Pod limitem — nevzniká účast na DP, NEPOČÍTÁ se'},
+    'DPČ-nad': {cls:'ok', text:'✓ Nad limitem 3 999 Kč — vzniká účast na DP, počítá se'},
+    'DPČ-pod': {cls:'err', text:'✗ Pod limitem 3 999 Kč — nevzniká účast na DP, NEPOČÍTÁ se'},
+    'jednatel-pojištěn': {cls:'ok', text:'✓ Pojištěn — počítá se'},
+    'jednatel-nepojištěn': {cls:'warn', text:'⚠ Nepojištěn — NEPOČÍTÁ se'},
+  };
+  if (druh && notes[druh]) {
+    const n = document.createElement('div');
+    n.className = 'typ-note ' + notes[druh].cls;
+    n.textContent = notes[druh].text;
+    row.appendChild(n);
+  }
+}
+
+function removePracovniTyp(id) {
+  const el = document.getElementById('typ-' + id);
+  if (el) el.remove();
+}
+
+function getPracovniTypText() {
+  const rows = document.querySelectorAll('.typ-row');
+  if (!rows.length) return '';
+  let txt = '';
+  rows.forEach(row => {
+    const druh = row.querySelector('.typ-druh').value;
+    const popis = row.querySelector('.typ-popis').value;
+    if (druh) txt += '  • ' + druh + (popis ? ' — ' + popis : '') + '\n';
+  });
+  return txt;
+}
+
+// ─── Pension age calculation ──────────────────────────────────────────────────
+function calcDuchodovyVek(rokNarozeni, pohlavi, deti) {
+  const rok = parseInt(rokNarozeni);
+  const jeZena = pohlavi === 'žena';
+  const pocetDeti = parseInt(deti) || 0;
+  let vekMesice;
+  if (rok <= 1935) {
+    vekMesice = jeZena ? (55 - Math.min(pocetDeti, 5)) * 12 : 60 * 12;
+  } else if (rok <= 1971) {
+    const vekMuz = Math.min(60 * 12 + (rok - 1935) * 2, 65 * 12);
+    vekMesice = jeZena ? Math.min(vekMuz, (55 - Math.min(pocetDeti,5)) * 12 + (rok-1935)*4) : vekMuz;
+  } else if (rok <= 1973) {
+    vekMesice = 65 * 12;
+  } else if (rok <= 1988) {
+    vekMesice = Math.min(65 * 12 + 8 + (rok - 1973), 67 * 12);
+  } else {
+    vekMesice = 67 * 12;
+  }
+  const roky = Math.floor(vekMesice / 12);
+  const mesice = vekMesice % 12;
+  return {
+    roky, mesice,
+    text: mesice > 0 ? roky + ' let ' + mesice + ' měs.' : roky + ' let',
+    rok: parseInt(rokNarozeni) + roky + (mesice > 0 ? 1 : 0),
+    odhadOnly: rok >= 1989
+  };
+}
+
+// ─── Build doplneni text ──────────────────────────────────────────────────────
+function buildDoplneni() {
+  let txt = 'Doplňující informace:\n';
+  const dob = document.getElementById('q-dob').value;
+  if (dob) {
+    const d = new Date(dob);
+    const age = Math.floor((new Date() - d) / (365.25*24*60*60*1000));
+    const rok = d.getFullYear();
+    const dv = calcDuchodovyVek(rok, answers.pohlavi || 'muž', answers.deti || '0');
+    txt += '- Datum narození: ' + d.toLocaleDateString('cs-CZ') + ' (věk: ' + age + ' let)\n';
+    txt += '- Pohlaví: ' + (answers.pohlavi || 'neuvedeno') + '\n';
+    if (answers.deti) txt += '- Počet dětí: ' + answers.deti + '\n';
+    txt += '- Důchodový věk: ' + dv.text + (dv.odhadOnly ? ' (odhad — přesný věk stanoví nařízení vlády)' : '') + '\n';
+    txt += '- Rok odchodu do důchodu: ' + dv.rok + '\n';
+  }
+  if (answers.prijem) txt += '- Typ příjmu: ' + answers.prijem + '\n';
+  if (answers.pausal) txt += '- Výdajový paušál: ' + answers.pausal + ' %\n';
+  const prijemVal = document.getElementById('q-prijem-val').value;
+  if (prijemVal) txt += '- Roční obrat/příjem: ' + prijemVal + ' Kč (měsíčně: ' + Math.round(prijemVal/12) + ' Kč)\n';
+  const nee = getNeevidovanoText();
+  if (nee) txt += '- Neevidovaná období:\n' + nee;
+  const ptyp = getPracovniTypText();
+  if (ptyp) txt += '- Upřesnění typu pracovního vztahu:\n' + ptyp;
+  return txt;
+}
+
+// ─── Analysis ─────────────────────────────────────────────────────────────────
+const loadingMsgs = ['Čtu doby pojištění…','Identifikuji neevidovaná období…','Počítám scénáře…','Připravuji výstup…'];
+
+async function startAnalysis() {
+  const apiKey = getApiKey();
+  if (!apiKey) { showError('Zadejte prosím OpenRouter API klíč.'); return; }
+  if (!pdfBase64 && imageFiles.length === 0) { showError('Nahrajte alespoň jeden zdroj dat.'); return; }
+
+  showStep('step-loading');
+  let mi = 0;
+  const msgEl = document.getElementById('loadingMsg');
+  const interval = setInterval(() => { mi=(mi+1)%loadingMsgs.length; msgEl.textContent = loadingMsgs[mi]; }, 2500);
+
+  const doplneni = buildDoplneni();
+
+  const prompt = buildPrompt(doplneni);
+
+  // Build message content
+  const parts = [];
+  if (pdfBase64 && pdfText) {
+    parts.push({ type:'text', text:'ZDROJ 1 — Text z IOLDP PDF:\n\n' + pdfText });
+  }
+  if (imageFiles.length > 0) {
+    parts.push({ type:'text', text:'\nZDROJ 2 — Screenshot(y) z Moje konto (' + imageFiles.length + ' obrázek/ů):' });
+    imageFiles.forEach(img => {
+      parts.push({ type:'image_url', image_url:{ url:'data:' + img.mediaType + ';base64,' + img.base64 } });
+    });
+  }
+  const sourceNote = (pdfBase64 && imageFiles.length > 0)
+    ? '\nMáš oba zdroje. Moje konto je aktuálnější — upřednostni ho. IOLDP doplní historická data.'
+    : imageFiles.length > 0 ? '\nZdroj: pouze screenshoty z Moje konto.' : '\nZdroj: pouze IOLDP PDF.';
+  parts.push({ type:'text', text: sourceNote + '\n\n' + prompt });
+
+  const messageContent = parts.length === 1 ? parts[0].text : parts;
+
+  try {
+    const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + apiKey,
+        'HTTP-Referer': 'https://poradce-dave.github.io',
+        'X-Title': 'Audit duchodu'
+      },
+      body: JSON.stringify({
+        model: 'anthropic/claude-sonnet-4-5',
+        max_tokens: 8000,
+        messages: [{ role:'user', content: messageContent }]
+      })
+    });
+
+    clearInterval(interval);
+    if (!response.ok) {
+      const err = await response.json();
+      throw new Error(err.error?.message || 'API chyba ' + response.status);
+    }
+    const data = await response.json();
+    const raw = (data.choices && data.choices[0] ? data.choices[0].message.content : '') || '';
+
+    let clean = raw.replace(/```json|```/g,'').trim();
+    const js = clean.indexOf('{');
+    const je = clean.lastIndexOf('}');
+    if (js !== -1 && je !== -1) clean = clean.substring(js, je+1);
+
+    let result;
+    try {
+      result = JSON.parse(clean);
+    } catch(pe) {
+      let fixed = clean.replace(/,\s*$/, '');
+      const ob = (fixed.match(/{/g)||[]).length - (fixed.match(/}/g)||[]).length;
+      const ob2 = (fixed.match(/\[/g)||[]).length - (fixed.match(/\]/g)||[]).length;
+      const lq = fixed.lastIndexOf('"');
+      const lq2 = fixed.lastIndexOf('"', lq-1);
+      if (lq > lq2 && (fixed.match(/"/g)||[]).length % 2 !== 0) fixed += '"';
+      for(let i=0;i<ob2;i++) fixed += ']';
+      for(let i=0;i<ob;i++) fixed += '}';
+      result = JSON.parse(fixed);
+    }
+    renderOutput(result);
+    showStep('step-output');
+  } catch(err) {
+    clearInterval(interval);
+    showStep('step-upload');
+    showError('Chyba při analýze: ' + err.message);
+  }
+}
+
+function buildPrompt(doplneni) {
+  return `Jsi expert na český důchodový systém. Analyzuj přehled dob důchodového pojištění z ČSSZ (IOLDP nebo Moje konto).
+
+${doplneni}
+
+Vrať POUZE validní JSON bez markdown backticks:
+{
+  "klient": {"vek":číslo,"rok_narozeni":číslo,"duchod_vek":číslo,"duchod_rok":číslo,"let_do_duchodu":číslo},
+  "evidence": {
+    "evidovane_dni":číslo,"evidovane_roky_text":"text","neevidovane_dni":číslo,"neevidovane_roky_text":"text","nahradni_dni":číslo,
+    "obdobi":[{"od":"MM/RRRR","do":"MM/RRRR","typ":"text","dny":číslo,"vz":číslo,"stav":"ok|problem|rešit|neevidováno"}]
+  },
+  "vz":{"rocni_vz":číslo,"mesicni_vz":číslo,"komentar":"text"},
+  "semafory":[{"barva":"red|amber|green|blue","titulek":"text","text":"text"}],
+  "duchod_nyni":{"castka":číslo,"evidovane_roky":číslo,"poznamka":"text"},
+  "duchod_po_doplneni":{"castka":číslo,"pridane_roky":číslo,"co_se_doplni":"text","poznamka":"text"},
+  "scenare":[
+    {"id":"A","titulek":"text","rocni_vz":číslo,"roky_pojisteni":číslo,"duchod_mesicni":číslo,"procento_prijmu":číslo,"poznamka":"text","best":false},
+    {"id":"B","titulek":"text","rocni_vz":číslo,"roky_pojisteni":číslo,"duchod_mesicni":číslo,"procento_prijmu":číslo,"poznamka":"text","best":true},
+    {"id":"C","titulek":"text","rocni_vz":číslo,"roky_pojisteni":číslo,"duchod_mesicni":číslo,"procento_prijmu":číslo,"poznamka":"text","best":false},
+    {"id":"D","titulek":"text","rocni_vz":číslo,"roky_pojisteni":číslo,"duchod_mesicni":číslo,"procento_prijmu":číslo,"poznamka":"text","best":false}
+  ],
+  "propast":{"aktualni_prijem_mesic":číslo,"duchod_scenar_a":číslo,"propast_mesic":číslo,"propast_20let":číslo},
+  "invalidni_duchod":{
+    "narok_nyni":true,"podminka_splnena_nyni":"text","dopoctena_doba_let":číslo,"upozorneni":"text",
+    "nyni":{"stupen1":{"castka":číslo,"poznamka":"text"},"stupen2":{"castka":číslo,"poznamka":"text"},"stupen3":{"castka":číslo,"poznamka":"text"}},
+    "po_doplneni":{"narok":true,"stupen1":{"castka":číslo,"poznamka":"text"},"stupen2":{"castka":číslo,"poznamka":"text"},"stupen3":{"castka":číslo,"poznamka":"text"}}
+  },
+  "kroky":[{"priorita":"high|medium|low","titulek":"text","text":"text"}]
+}
+
+PRAVIDLA VÝPOČTU 2026:
+- Základní výměra: 4 900 Kč
+- Procentní sazba: 1,495 % za rok pojištění
+- Redukce PVZB: do 21 546 Kč = 99 %, 21 546–195 868 Kč = 26 %, nad = 0 %
+- Min. záloha OSVČ hlavní: 5 720 Kč/měs., min. VZ: 19 587 Kč/měs. (235 044 Kč/rok)
+- OSVČ paušál 60%: ZD = obrat×0,4; VZ = ZD×0,5; platí se max(VZ ze zisku, min. VZ)
+- Důchodový věk: použij z doplňujících informací. Pro ročníky 1989+ = 67 let (odhad)
+
+INVALIDNÍ DŮCHOD 2026:
+- Základní výměra: 4 900 Kč
+- ID3: 1,495 % za rok; ID2: polovina ID3 procentní výměry; ID1: třetina ID3
+- Dopočtená doba: od dnes do důch. věku ženy bez dětí stejného roku nar.
+- Krátí se: dopočtená × (dny_pojištění_od_18 / celkové_dny_od_18)
+- Podmínka: věk 26–28 let = min. 4 roky pojištění v posledních 10 letech
+- Počítej nyni i po_doplneni (s EU dobami atd.)
+
+ZAHRANIČNÍ DOBY:
+- EU: počítají se pro nárok (koordinace 883/2004)
+- USA, Kanada: počítají se pro nárok (bilaterální smlouva)
+- UK po 2021: nepočítají se automaticky
+- Ostatní bez smlouvy: nepočítají se
+- OBZP: nepočítá se vůbec
+
+DPP/DPČ HISTORICKÉ LIMITY:
+- DPP do 2023: nad 10 000 Kč/měs; 2025: nad 11 500 Kč; 2026: nad 12 000 Kč
+- DPČ: nad 3 999 Kč/měs (stabilní)
+
+STUDIUM:
+- Před 1.1.2010: max 6 let po 18. roku, z 80 %, VZ=0 (vyloučená doba)
+- Po 1.1.2010: NEPOČÍTÁ se
+- Doktorát po 2009: od 2026 max 4 roky z 80 %
+
+Buď konkrétní. Scénáře A-D vycházejí ze stavu PO doplnění evidence.`;
+}
+
+// ─── Output rendering ─────────────────────────────────────────────────────────
+function fmt(n) { return n ? Number(n).toLocaleString('cs-CZ') : '–'; }
+
+function renderOutput(d) {
+  const k = d.klient||{};
+  const ev = d.evidence||{};
+  const vz = d.vz||{};
+  const prop = d.propast||{};
+  const bm = {ok:'badge-green',problem:'badge-red','rešit':'badge-amber',neevidováno:'badge-amber'};
+  const lm = {ok:'OK',problem:'Problém','rešit':'Řešit',neevidováno:'Neevidováno'};
+  const dm = {high:'dot-red',medium:'dot-amber',low:'dot-green'};
+
+  const semHtml = (d.semafory||[]).map(s =>
+    '<div class="semafor semafor-' + s.barva + '"><div class="semafor-title">' + s.titulek + '</div>' + s.text + '</div>'
+  ).join('');
+
+  const perHtml = (ev.obdobi||[]).map(p =>
+    '<tr><td>' + p.od + ' – ' + p.do + '</td><td style="color:var(--text)">' + p.typ + '</td><td>' + (p.dny||'–') + ' dní</td><td>' + (p.vz ? fmt(p.vz)+' Kč' : '–') + '</td><td><span class="badge ' + (bm[p.stav]||'badge-blue') + '">' + (lm[p.stav]||p.stav) + '</span></td></tr>'
+  ).join('');
+
+  const scHtml = (d.scenare||[]).map(s =>
+    '<div class="sc-card ' + (s.best?'best':'') + '">'
+    + '<div class="sc-title">Scénář ' + s.id + ' — ' + s.titulek + '</div>'
+    + '<div class="sc-row"><span>Roční VZ</span><span>' + fmt(s.rocni_vz) + ' Kč</span></div>'
+    + '<div class="sc-row"><span>Roky pojištění</span><span>' + s.roky_pojisteni + ' let</span></div>'
+    + '<div class="sc-row"><span>Orientační důchod</span><span>' + fmt(s.duchod_mesicni) + ' Kč/měs.</span></div>'
+    + '<div class="sc-row"><span>% z příjmu</span><span>' + s.procento_prijmu + ' %</span></div>'
+    + '<div class="sc-note">' + s.poznamka + '</div></div>'
+  ).join('');
+
+  const krHtml = (d.kroky||[]).map(kr =>
+    '<div class="action"><div class="action-dot ' + (dm[kr.priorita]||'dot-blue') + '"></div><div class="action-text"><strong>' + kr.titulek + '</strong> — ' + kr.text + '</div></div>'
+  ).join('');
+
+  // Invalidni duchod
+  let idHtml = '';
+  if (d.invalidni_duchod) {
+    const id = d.invalidni_duchod;
+    const stupne = ['stupen1','stupen2','stupen3'];
+    const stupLabels = ['1. stupeň (pokles 35–49 %)','2. stupeň (pokles 50–69 %)','3. stupeň (pokles 70 %+)'];
+    const stupColors = ['rgba(224,160,80,.08)','rgba(224,120,60,.08)','rgba(224,92,92,.08)'];
+    const stupBorder = ['var(--amber)','#e07030','var(--red)'];
+    const stupText = ['#f0c890','#f0a060','#f0a0a0'];
+
+    const nyniCols = stupne.map((s,i) => {
+      const st = id.nyni?.[s];
+      return '<div style="background:' + stupColors[i] + ';border-left:2px solid ' + stupBorder[i] + ';border-radius:0 6px 6px 0;padding:10px 12px;margin-bottom:8px">'
+        + '<div style="font-size:10px;color:' + stupText[i] + ';font-family:\'DM Mono\',monospace;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">' + stupLabels[i] + '</div>'
+        + '<div style="font-size:1.2rem;font-weight:600;color:' + stupText[i] + '">' + fmt(st?.castka) + ' Kč/měs.</div>'
+        + (st?.poznamka ? '<div style="font-size:11px;color:var(--text3);margin-top:4px;line-height:1.4">' + st.poznamka + '</div>' : '')
+        + '</div>';
+    }).join('');
+
+    const doplCols = stupne.map((s,i) => {
+      const st = id.po_doplneni?.[s];
+      const stN = id.nyni?.[s];
+      const diff = (st && stN) ? st.castka - stN.castka : 0;
+      return '<div style="background:rgba(106,159,212,.06);border-left:2px solid var(--blue);border-radius:0 6px 6px 0;padding:10px 12px;margin-bottom:8px">'
+        + '<div style="font-size:10px;color:#a8c8e8;font-family:\'DM Mono\',monospace;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">' + ['1. stupeň','2. stupeň','3. stupeň'][i] + '</div>'
+        + '<div style="font-size:1.2rem;font-weight:600;color:#a8c8e8">' + fmt(st?.castka) + ' Kč/měs.</div>'
+        + (diff > 0 ? '<div style="font-size:11px;color:#90d498;margin-top:4px">+' + fmt(diff) + ' Kč po doplnění</div>' : '')
+        + '</div>';
+    }).join('');
+
+    idHtml = '<div class="section">'
+      + '<div class="section-head">Invalidní důchod — kdybyste se teď stal/a invalidní</div>'
+      + '<div style="font-size:12px;color:var(--text3);font-family:\'DM Mono\',monospace;margin-bottom:12px">Orientační výpočet. Přesný výpočet provede ČSSZ. Nárok vzniká po posouzení posudkovým lékařem IPZS.</div>'
+      + (!id.narok_nyni ? '<div class="semafor semafor-red" style="margin-bottom:12px"><strong>Pozor:</strong> ' + (id.podminka_splnena_nyni||'Podmínka doby pojištění není splněna.') + '</div>' : '')
+      + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">'
+      + '<div><div style="font-size:11px;color:var(--text3);font-family:\'DM Mono\',monospace;text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px">Nyní (současná evidence)</div>' + nyniCols + '</div>'
+      + '<div><div style="font-size:11px;color:var(--text3);font-family:\'DM Mono\',monospace;text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px">Po doplnění evidence</div>' + doplCols + '</div>'
+      + '</div>'
+      + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">'
+      + '<div style="background:var(--bg3);border-radius:8px;padding:12px;font-size:13px"><div style="font-size:10px;color:var(--text3);font-family:\'DM Mono\',monospace;text-transform:uppercase;margin-bottom:6px">Dopočtená doba</div><div style="color:var(--text);font-weight:500">' + id.dopoctena_doba_let + ' let</div><div style="font-size:11px;color:var(--text3);margin-top:4px">přidáno do výpočtu ID</div></div>'
+      + '<div style="background:var(--bg3);border-radius:8px;padding:12px;font-size:13px"><div style="font-size:10px;color:var(--text3);font-family:\'DM Mono\',monospace;text-transform:uppercase;margin-bottom:6px">Upozornění</div><div style="font-size:12px;color:var(--text2);line-height:1.5">' + (id.upozorneni||'') + '</div></div>'
+      + '</div></div>';
+  }
+
+  document.getElementById('outputContent').innerHTML =
+    '<div class="output-header"><div class="output-label-sm">Výstup auditu důchodu</div><div class="output-title">Analýza IOLDP / Moje konto</div><div class="output-date">Zpracováno ' + new Date().toLocaleDateString('cs-CZ') + '</div></div>'
+
+    + '<div class="metrics">'
+    + '<div class="metric"><div class="metric-label">Věk</div><div class="metric-value">' + (k.vek||'–') + '</div><div class="metric-sub">nar. ' + (k.rok_narozeni||'–') + '</div></div>'
+    + '<div class="metric"><div class="metric-label">Důchodový věk</div><div class="metric-value">' + (k.duchod_vek||67) + ' let</div><div class="metric-sub">rok ' + (k.duchod_rok||'–') + '</div></div>'
+    + '<div class="metric"><div class="metric-label">Evidováno</div><div class="metric-value">' + (ev.evidovane_dni||'–') + ' dní</div><div class="metric-sub">' + (ev.evidovane_roky_text||'') + '</div></div>'
+    + '<div class="metric"><div class="metric-label">Neevidováno</div><div class="metric-value">' + (ev.neevidovane_dni||'–') + ' dní</div><div class="metric-sub">' + (ev.neevidovane_roky_text||'') + '</div></div>'
+    + '<div class="metric"><div class="metric-label">Měs. VZ</div><div class="metric-value">' + fmt(vz.mesicni_vz) + ' Kč</div><div class="metric-sub">' + (vz.komentar||'') + '</div></div>'
+    + '</div>'
+
+    + '<div class="section"><div class="section-head">Semafor auditu</div>' + semHtml + '</div>'
+
+    + '<div class="section"><div class="section-head">Přehled evidovaných období</div><table class="period-table"><thead><tr><th>Období</th><th>Typ</th><th>Dny</th><th>Vyměřovací základ</th><th>Stav</th></tr></thead><tbody>' + perHtml + '</tbody></table></div>'
+
+    + '<div class="section"><div class="section-head">Přehled orientačního důchodu — srovnání variant</div>'
+    + '<div style="font-size:11px;color:var(--text3);font-family:\'DM Mono\',monospace;margin-bottom:12px">Orientační výpočty. Nezohledňují valorizace ani legislativní změny.</div>'
+    + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">'
+    + '<div style="background:rgba(224,92,92,.06);border:1px solid rgba(224,92,92,.25);border-radius:10px;padding:16px"><div style="font-size:10px;color:#f0a0a0;font-family:\'DM Mono\',monospace;text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px">① Nyní (současná evidence)</div><div style="font-size:1.5rem;font-weight:600;color:#f0a0a0;margin-bottom:4px">' + fmt(d.duchod_nyni?.castka) + ' Kč/měs.</div><div style="font-size:11px;color:var(--text3);line-height:1.5">' + (d.duchod_nyni?.evidovane_roky ? d.duchod_nyni.evidovane_roky + ' let evidováno · ' : '') + (d.duchod_nyni?.poznamka||'') + '</div></div>'
+    + '<div style="background:rgba(106,159,212,.06);border:1px solid rgba(106,159,212,.25);border-radius:10px;padding:16px"><div style="font-size:10px;color:#a8c8e8;font-family:\'DM Mono\',monospace;text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px">② Po doplnění evidence</div><div style="font-size:1.5rem;font-weight:600;color:#a8c8e8;margin-bottom:4px">' + fmt(d.duchod_po_doplneni?.castka) + ' Kč/měs.</div><div style="font-size:11px;color:var(--text3);line-height:1.5">' + (d.duchod_po_doplneni?.pridane_roky ? '+' + d.duchod_po_doplneni.pridane_roky + ' let · ' : '') + (d.duchod_po_doplneni?.co_se_doplni||'') + '</div></div>'
+    + '</div>'
+    + '<div style="font-size:11px;color:var(--text3);font-family:\'DM Mono\',monospace;margin-bottom:8px">Scénáře A–D vycházejí ze stavu po doplnění evidence:</div>'
+    + '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px">'
+    + (d.scenare||[]).map(s => '<div style="background:' + (s.best?'rgba(109,184,122,.08)':'var(--bg3)') + ';border:1px solid ' + (s.best?'rgba(109,184,122,.3)':'var(--border)') + ';border-radius:10px;padding:12px;text-align:center"><div style="font-size:10px;color:var(--text3);font-family:\'DM Mono\',monospace;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px">Scénář ' + s.id + '</div><div style="font-size:1.1rem;font-weight:600;color:' + (s.best?'#90d498':'var(--text)') + '">' + fmt(s.duchod_mesicni) + ' Kč</div><div style="font-size:10px;color:var(--text3);margin-top:4px">' + s.procento_prijmu + ' % příjmu</div></div>').join('')
+    + '</div></div>'
+
+    + '<div class="section"><div class="section-head">Scénáře k roku ' + (k.duchod_rok||2065) + ' — orientační</div><div class="scenarios">' + scHtml + '</div></div>'
+
+    + '<div class="section"><div class="section-head">Propast mezi příjmem a důchodem</div>'
+    + '<div class="propast-row"><span>Aktuální příjem (měsíčně)</span><span>' + fmt(prop.aktualni_prijem_mesic) + ' Kč</span></div>'
+    + '<div class="propast-row"><span>Scénář A — orientační důchod</span><span style="color:var(--red)">' + fmt(prop.duchod_scenar_a) + ' Kč/měs.</span></div>'
+    + '<div class="propast-row propast-highlight"><span>Propast (měsíčně)</span><span>' + fmt(prop.propast_mesic) + ' Kč/měs.</span></div>'
+    + '<div class="propast-row propast-highlight"><span>Propast (20 let čerpání)</span><span>' + fmt(prop.propast_20let) + ' Kč</span></div>'
+    + '</div>'
+
+    + idHtml
+
+    + '<div class="section"><div class="section-head">Doporučené kroky</div><div class="action-list">' + krHtml + '</div></div>'
+
+    + '<div class="disclaimer">Upozornění: Výpočty jsou orientační. Přesný výpočet provede ČSSZ při žádosti o důchod.<br>Nezohledňují valorizace, inflaci ani budoucí legislativní změny.<br>Min. záloha OSVČ 2026 (hlavní činnost): 5 720 Kč/měs. | Min. VZ: 19 587 Kč/měs.</div>';
+}
+
+// ─── Utils ────────────────────────────────────────────────────────────────────
+function showStep(id) {
+  document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+function showError(msg) {
+  const el = document.getElementById('uploadError');
+  el.textContent = msg;
+  el.style.display = 'block';
+}
+function hideError() {
+  document.getElementById('uploadError').style.display = 'none';
+}
+
+function restart() {
+  pdfBase64 = null;
+  imageFiles = [];
+  pdfText = '';
+  neevidovanoItems = [];
+  pracovniTypItems = [];
+  Object.keys(answers).forEach(k => delete answers[k]);
+  document.getElementById('fileInputPdf').value = '';
+  document.getElementById('fileInputImg').value = '';
+  document.getElementById('fileListPdf').innerHTML = '';
+  document.getElementById('fileListImg').innerHTML = '';
+  document.getElementById('fileInfoPdf').style.display = 'none';
+  document.getElementById('fileInfoImg').style.display = 'none';
+  document.getElementById('neevidovano-list').innerHTML = '';
+  document.getElementById('pracovni-typ-list').innerHTML = '';
+  document.getElementById('q-prijem-val').value = '';
+  document.getElementById('q-dob').value = '';
+  document.getElementById('q-pausal-wrap').style.display = 'none';
+  document.getElementById('q-deti-wrap').style.display = 'none';
+  document.getElementById('q-pracovni-typ-wrap').style.display = 'none';
+  document.querySelectorAll('.q-opt').forEach(e => e.classList.remove('sel'));
+  hideError();
+  showStep('step-upload');
+  document.getElementById('questionsSection').style.display = 'none';
+  document.getElementById('analyzeRow').style.display = 'none';
+}
+</script>
+</body>
+</html>
